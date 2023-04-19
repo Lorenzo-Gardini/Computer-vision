@@ -52,3 +52,9 @@ def resize_with_borders(image, side):
     resized_image = _resize_image(image, side)
     top, bottom, left, right = _compute_borders(resized_image.shape, side)
     return cv2.copyMakeBorder(resized_image, top, bottom, left, right, borderType=cv2.BORDER_CONSTANT, value=0)
+
+
+def pair_images(images):
+    return [(image_a, image_b)
+            for i, image_a in enumerate(images)
+            for j, image_b in enumerate(images) if i < j]
