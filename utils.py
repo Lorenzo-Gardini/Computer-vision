@@ -25,20 +25,15 @@ def _resize_image(image, side):
     if not isinstance(side, int):
         raise TypeError()
     old_height, old_width, _ = image.shape
-    if old_height > side or old_width > side:
-        # this is a shrinking
-        shape = \
-            (side, int(old_height * (side / old_width))) \
-            if old_width >= old_height \
-            else (int(old_width * (side / old_height)), side)
-        return cv2.resize(image, shape, interpolation=cv2.INTER_AREA)
-    else:
-        # this is an enlargement
-        shape = \
-            (side, int(old_height * (old_width / side))) \
-            if old_width >= old_height \
-            else (int(old_width * (old_height / side)), side)
-        return cv2.resize(image, shape, interpolation=cv2.INTER_CUBIC)
+    shape = \
+        (side, int(old_height * (side / old_width))) \
+        if old_width >= old_height \
+        else (int(old_width * (side / old_height)), side)
+    return cv2.resize(
+        image,
+        shape,
+        interpolation=(cv2.INTER_AREA if old_height > side or old_width > side else cv2.INTER_CUBIC)
+    )
 
 
 def _compute_borders(shape, side):
