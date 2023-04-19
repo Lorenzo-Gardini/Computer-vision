@@ -2,8 +2,11 @@ import importlib.util
 import cv2
 import os
 
-if importlib.util.find_spec("google") is not None:
+if importlib.util.find_spec("google") is not None and \
+        importlib.util.find_spec("google.colab") is not None and \
+        importlib.util.find_spec("google.colab.patches") is not None:
     from google.colab.patches import cv2_imshow
+
 
     def show_image(image):
         cv2_imshow(image)
@@ -27,8 +30,8 @@ def _resize_image(image, side):
     old_height, old_width, _ = image.shape
     shape = \
         (side, int(old_height * (side / old_width))) \
-        if old_width >= old_height \
-        else (int(old_width * (side / old_height)), side)
+            if old_width >= old_height \
+            else (int(old_width * (side / old_height)), side)
     return cv2.resize(
         image,
         shape,
