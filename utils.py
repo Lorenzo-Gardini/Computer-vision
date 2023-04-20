@@ -1,7 +1,7 @@
 import importlib.util
 import cv2
 import os
-
+import zipfile
 import numpy as np
 
 if importlib.util.find_spec("google") is not None and \
@@ -65,3 +65,7 @@ def pair_images(images):
 def optionally_mkdir(directory):
     if not os.path.exists(directory):
         os.makedirs(directory)
+
+def unzip(path):
+    with zipfile.ZipFile(path, "r") as file:
+        file.extractall()
