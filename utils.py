@@ -1,6 +1,7 @@
 import importlib.util
 import cv2
 import os
+import zipfile
 
 if importlib.util.find_spec("google") is not None and \
         importlib.util.find_spec("google.colab") is not None and \
@@ -58,3 +59,10 @@ def pair_images(images):
     return [(image_a, image_b)
             for i, image_a in enumerate(images)
             for j, image_b in enumerate(images) if i < j]
+
+
+def unzip(path):
+    folder_path = os.path.splitext(path)[0]
+    with zipfile.ZipFile(path, "r") as file:
+        file.extractall(folder_path)
+    return folder_path
