@@ -62,7 +62,5 @@ def pair_images(images):
 
 
 def unzip(path):
-    folder_path = os.path.splitext(path)[0]
     with zipfile.ZipFile(path, "r") as file:
-        file.extractall(folder_path)
-    return folder_path
+        file.extractall()
