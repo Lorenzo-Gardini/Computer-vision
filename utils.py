@@ -2,6 +2,8 @@ import importlib.util
 import cv2
 import os
 
+import numpy as np
+
 if importlib.util.find_spec("google") is not None and \
         importlib.util.find_spec("google.colab") is not None and \
         importlib.util.find_spec("google.colab.patches") is not None:
@@ -17,11 +19,11 @@ else:
         cv2.destroyWindow("")
 
 
-def load_image(path, mode=cv2.IMREAD_COLOR):
+def load_image(path, mode=cv2.IMREAD_COLOR, dtype=np.uint8):
     if not os.path.isfile(path):
         raise FileNotFoundError(path)
     else:
-        return cv2.imread(path, mode)
+        return cv2.imread(path, mode).astype(dtype)
 
 
 def _resize_image(image, side):
@@ -58,3 +60,8 @@ def pair_images(images):
     return [(image_a, image_b)
             for i, image_a in enumerate(images)
             for j, image_b in enumerate(images) if i < j]
+
+
+def optionally_mkdir(directory):
+    if not os.path.exists(directory):
+        os.makedirs(directory)
