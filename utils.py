@@ -3,6 +3,7 @@ import cv2
 import os
 import zipfile
 import numpy as np
+import pickle
 
 if importlib.util.find_spec("google") is not None and \
         importlib.util.find_spec("google.colab") is not None and \
@@ -62,10 +63,12 @@ def pair_images(images):
             for j, image_b in enumerate(images) if i < j]
 
 
-def optionally_mkdir(directory):
-    if not os.path.exists(directory):
-        os.makedirs(directory)
-
 def unzip(path):
     with zipfile.ZipFile(path, "r") as file:
         file.extractall()
+
+
+def load_binary(path):
+    with open(path, "rb") as file:
+        result = pickle.load(file)
+    return result
