@@ -12,11 +12,11 @@ import os
 
 tf.keras.utils.disable_interactive_logging()
 
-unzip("datasets/test-public-faces.zip")
-unzip("datasets/test-public-lists.zip")
-unzip("datasets/test-private-faces.zip")
-unzip("datasets/test-private-lists.zip")
-unzip("datasets/test-private-labels.zip")
+#unzip("datasets/test-public-faces.zip")
+#unzip("datasets/test-public-lists.zip")
+#unzip("datasets/test-private-faces.zip")
+#unzip("datasets/test-private-lists.zip")
+#unzip("datasets/test-private-labels.zip")
 
 train_lists_folder = 'test-public-lists'
 train_faces_folder = 'test-public-faces'
@@ -25,20 +25,41 @@ test_lists_folder = 'test-private-lists'
 test_labels_folder = 'test-private-labels'
 test_faces_folder = "test-private-faces"
 
-if not os.path.exists("class_encoding.json"):
-    persist_classes_encoding(train_lists_folder, "class_encoding.json")
+#persist_classes_encoding(train_lists_folder, "class_encoding.json")
 class_encodings = load_classes_encoding('class_encoding.json')
-move_and_rename_images(train_lists_folder, train_faces_folder, train_faces_folder_dst)
+#move_and_rename_images(train_lists_folder, train_faces_folder, train_faces_folder_dst)
 
-create_multiclass_train_dataset(train_lists_folder, class_encodings, train_faces_folder, "train_multiclass.csv")
-create_binary_train_dataset('train_multiclass.csv', 'train_binary.csv')
-create_multiclass_test_dataset(test_lists_folder, test_labels_folder, class_encodings, "test_multiclass.csv")
-create_binary_test_dataset(test_lists_folder, test_labels_folder, "test_binary.csv")
-create_embeddings_resnet(train_faces_folder_dst, 'train_embeddings_resnet.bin')
-create_embeddings_facenet(train_faces_folder_dst, 'train_embeddings_facenet.bin')
-create_embeddings_resnet(test_faces_folder, 'train_embeddings_resnet.bin')
-create_embeddings_facenet(test_faces_folder, 'train_embeddings_facenet.bin')
-print(load_binary('train_embeddings_facenet.bin'))
+train_resnet_embeddings = create_embeddings_resnet(train_faces_folder_dst, 'train_embeddings_resnet.bin')
+train_facenet_embedding = create_embeddings_facenet(train_faces_folder_dst, 'train_embeddings_facenet.bin')
+
+multiclass_train_dataset = \
+    create_multiclass_train_dataset(train_lists_folder, class_encodings, train_faces_folder, "train_multiclass.csv")
+combine_dataset_embeddings(multiclass_train_dataset, train_resnet_embeddings, "train_resnet_multiclass.bin")
+combine_dataset_embeddings(multiclass_train_dataset, train_facenet_embedding, "train_facenet_multiclass.bin")
+del multiclass_train_dataset
+
+binary_train_dataset = \
+    create_binary_train_dataset('train_multiclass.csv', 'train_binary.csv')
+combine_dataset_embeddings(binary_train_dataset, train_resnet_embeddings, "train_resnet_binary.bin")
+combine_dataset_embeddings(binary_train_dataset, train_facenet_embedding, "train_facenet_binary.bin")
+del binary_train_dataset
+
+del train_resnet_embeddings
+del train_facenet_embedding
+test_resnet_embeddings = create_embeddings_resnet(test_faces_folder, "test_embeddings_resnet.bin")
+test_facenet_embeddings = create_embeddings_facenet(test_faces_folder, "test_embeddings_facenet.bin")
+
+multiclass_test_dataset = \
+    create_multiclass_test_dataset(test_lists_folder, test_labels_folder, class_encodings, "test_multiclass.csv")
+combine_dataset_embeddings(multiclass_test_dataset, test_resnet_embeddings, "train_resnet_multiclass.bin")
+combine_dataset_embeddings(multiclass_test_dataset, test_facenet_embeddings, "train_facenet_multiclass.bin")
+del multiclass_test_dataset
+
+binary_test_dataset = \
+    create_binary_test_dataset(test_lists_folder, test_labels_folder, "test_binary.csv")
+combine_dataset_embeddings(binary_test_dataset, test_resnet_embeddings, "train_resnet_binary.bin")
+combine_dataset_embeddings(binary_test_dataset, test_facenet_embeddings, "train_facenet_binary.bin")
+del binary_test_dataset
 
 # landscape = load_image("resources/family.jpeg")
 # landscape_resized = resize_with_borders(landscape, 512)

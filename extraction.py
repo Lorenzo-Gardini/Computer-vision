@@ -7,6 +7,7 @@ from shutil import copy
 
 import numpy as np
 import pandas as pd
+
 from keras_facenet import FaceNet
 from keras_vggface import VGGFace
 from keras_vggface.utils import preprocess_input
@@ -41,7 +42,7 @@ def create_multiclass_train_dataset(class_files_folder, class_encoding, images_s
     dataframe = {
         'p1': [],
         'p2': [],
-        'relation': []
+        'label': []
     }
     for class_file in os.listdir(class_files_folder):
         csv = pd.read_csv(f'{class_files_folder}/{class_file}')
@@ -56,8 +57,10 @@ def create_multiclass_train_dataset(class_files_folder, class_encoding, images_s
                 for image_2 in images_2:
                     dataframe['p1'].append(image_1)
                     dataframe['p2'].append(image_2)
-                    dataframe['relation'].append(class_encoding[Path(class_file).stem])
-    pd.DataFrame(dataframe).to_csv(dataset_destination_path, index=False)
+                    dataframe['label'].append(class_encoding[Path(class_file).stem])
+    result = pd.DataFrame(dataframe)
+    result.to_csv(dataset_destination_path, index=False)
+    return result
 
 
 def create_binary_train_dataset(multiclass_dataset_path, dataset_destination_path):
@@ -75,14 +78,16 @@ def create_binary_train_dataset(multiclass_dataset_path, dataset_destination_pat
             dataframe['p1'].append(p1)
             dataframe['p2'].append(p2)
             dataframe['label'].append(0)
-    pd.DataFrame(dataframe).to_csv(dataset_destination_path, index=False)
+    result = pd.DataFrame(dataframe)
+    result.to_csv(dataset_destination_path, index=False)
+    return result
 
 
 def create_multiclass_test_dataset(class_files_folder, labels_files_folder, class_encoding, dataset_destination_path):
     dataframe = {
         'p1': [],
         'p2': [],
-        'relation': []
+        'label': []
     }
     for class_file in os.listdir(class_files_folder):
         csv = pd.read_csv(f'{class_files_folder}/{class_file}')
@@ -91,8 +96,10 @@ def create_multiclass_test_dataset(class_files_folder, labels_files_folder, clas
             if data['labels']:
                 dataframe['p1'].append(data['p1'])
                 dataframe['p2'].append(data['p2'])
-                dataframe['relation'].append(class_encoding[Path(class_file).stem])
-    pd.DataFrame(dataframe).to_csv(dataset_destination_path, index=False)
+                dataframe['label'].append(class_encoding[Path(class_file).stem])
+    result = pd.DataFrame(dataframe)
+    result.to_csv(dataset_destination_path, index=False)
+    return result
 
 
 def create_binary_test_dataset(class_files_folder, labels_files_folder, dataset_destination_path):
@@ -101,15 +108,17 @@ def create_binary_test_dataset(class_files_folder, labels_files_folder, dataset_
         csv = pd.read_csv(f'{class_files_folder}/{class_file}')
         csv['label'] = pd.read_csv(f'{labels_files_folder}/{class_file}')
         dataframe = pd.concat([dataframe, csv])
-    pd.DataFrame(dataframe).to_csv(dataset_destination_path, index=False)
+    result = pd.DataFrame(dataframe)
+    result.to_csv(dataset_destination_path, index=False)
+    return result
 
 
 def create_embeddings_resnet(source_path, destination_path, log_freq=500):
     resnet = VGGFace(model='resnet50', include_top=False, input_shape=(224, 224, 3))
-    _create_embeddings(
+    return _create_embeddings(
         source_path,
         destination_path,
-        lambda x: resnet.predict(x)[0],
+        lambda x: resnet.predict(np.expand_dims(x, axis=0))[0],
         log_freq,
         preprocess_image=lambda x: preprocess_input(x.astype(np.float32), version=2)
     )
@@ -117,7 +126,7 @@ def create_embeddings_resnet(source_path, destination_path, log_freq=500):
 
 def create_embeddings_facenet(source_path, destination_path, log_freq=500):
     facenet = FaceNet()
-    _create_embeddings(
+    return _create_embeddings(
         source_path,
         destination_path,
         lambda x: facenet.embeddings(x)[0],
@@ -125,13 +134,31 @@ def create_embeddings_facenet(source_path, destination_path, log_freq=500):
     )
 
 
-def _create_embeddings(source_path, destination_path, compute_embedding, log_freq, preprocess_image=lambda x: x):
+def _create_embeddings(source_path, destination_path, compute_embedding, log_freq, preprocess_image=None):
     embeddings = {}
-    for i, image in enumerate(os.listdir(source_path), start=1):
-        image = load_image(f'{source_path}/{image}')
-        preprocessed_image = preprocess_image(image)
-        embeddings[image] = compute_embedding(preprocessed_image)
+    for _, image_path in enumerate(os.listdir(source_path)):
+        image = load_image(f"{source_path}/{image_path}")
+        preprocessed_image = preprocess_image(image) if preprocess_image is not None else image
+        embeddings[image_path] = compute_embedding(preprocessed_image)
         if len(embeddings) % log_freq == 0:
             print(len(embeddings))
     with open(destination_path, 'wb') as file:
         pickle.dump(embeddings, file)
+    return embeddings
+
+
+def combine_dataset_embeddings(dataset, embeddings, destination_path):
+    embedded_dataset = {
+        "p1": [],
+        "p2": [],
+        "label": []
+    }
+    for _, row in dataset.iterrows():
+        embedded_dataset["p1"].append(embeddings[row["p1"]])
+        embedded_dataset["p2"].append(embeddings[row["p2"]])
+        embedded_dataset["label"].append(row["label"])
+    embedded_dataset["p1"] = np.array(embedded_dataset["p1"])
+    embedded_dataset["p2"] = np.array(embedded_dataset["p2"])
+    embedded_dataset["label"] = np.array(embedded_dataset["label"])
+    with open(destination_path, 'wb') as file:
+        pickle.dump(embedded_dataset, file)
