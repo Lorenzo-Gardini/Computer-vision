@@ -55,7 +55,7 @@ for i, function in enumerate(functions):
             ("lambda", FunctionTransformer(function)),
             ("classifier", SVC(C=C, kernel=kernel, degree=2, gamma="scale", random_state=1234))
         ])
-        model.fit(features_train_binary, train_binary["labels"])
+        model.fit(features_train_binary, train_binary["label"])
         score = model.score(features_test_binary, test_binary["label"])
         grid_search_models.append((C, kernel))
         grid_search_scores.append(score)
@@ -71,7 +71,7 @@ for learning_rate in [0.1, 1, 10]:
         learning_rate=learning_rate,
         random_state=1234
     )
-    clf.fit(features_train_binary, train_binary["labels"])
+    clf.fit(features_train_binary, train_binary["label"])
     final_models.append(learning_rate)
     final_scores.append(clf.score(features_test_binary, test_binary["label"]))
 
