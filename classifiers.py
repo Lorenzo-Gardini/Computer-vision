@@ -19,12 +19,12 @@ class SequentialAdaBoostClassifier(AdaBoostClassifier):
             algorithm=algorithm,
             random_state=random_state,
         )
-        self._unfit_estimators = unfit_estimators
-        self._iterator_count = 0
+        self.unfit_estimators = unfit_estimators
+        self.iterator_count = 0
 
     def _make_estimator(self, append=True, random_state=None):
-        estimator = self._unfit_estimators[self._iterator_count]
-        self._iterator_count += 1
+        estimator = self.unfit_estimators[self.iterator_count]
+        self.iterator_count += 1
         if random_state is not None:
             _set_random_states(estimator, random_state)
         if append:
