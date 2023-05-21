@@ -5,7 +5,8 @@ import pandas as pd
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.svm import SVC
-from itertools import product
+from sklearn.model_selection import GridSearchCV
+from sklearn.ensemble import StackingClassifier
 
 
 def load(cache_filename):
@@ -35,32 +36,83 @@ features_test_binary[:, :test_features.shape[1]] = \
 features_test_binary[:, test_features.shape[1]:] = \
     np.array([test_features[test_faces.index(path)] for path in test_binary["p2"]])
 
-functions = [
-  lambda X: X[:, :(X.shape[1] // 2)] + X[:, (X.shape[1] // 2):],
-  lambda X: X[:, :(X.shape[1] // 2)] * X[:, (X.shape[1] // 2):],
-  lambda X: np.abs(X[:, :(X.shape[1] // 2)] - X[:, (X.shape[1] // 2):]),
-  lambda X: (X[:, :(X.shape[1] // 2)] + X[:, (X.shape[1] // 2):]) ** 2,
-  lambda X: (X[:, :(X.shape[1] // 2)] - X[:, (X.shape[1] // 2):]) ** 2,
-  lambda X: X[:, :(X.shape[1] // 2)] ** 2 + X[:, (X.shape[1] // 2):] ** 2,
-  lambda X: X[:, :(X.shape[1] // 2)] ** 2 - X[:, (X.shape[1] // 2):] ** 2
-]
-grid = {
-    "C": [0.1, 1, 10],
-    "kernel": ["rbf", "poly"]
-}
-models = []
 
-for i, function in enumerate(functions):
-    grid_search_models = []
-    grid_search_scores = []
-    for C, kernel in product(grid["C"], grid["kernel"]):
-        model = Pipeline([
-            ("lambda", FunctionTransformer(function)),
-            ("classifier", SVC(C=C, kernel=kernel, degree=2, gamma="scale", random_state=1234))
-        ])
-        model.fit(features_train_binary, train_binary["label"])
-        score = model.score(features_test_binary, test_binary["label"])
-        grid_search_models.append((C, kernel))
-        grid_search_scores.append(score)
-        print(f"Fitted model with parameters (lambda={i}, C={C}, kernel={kernel}), score: {score}")
-    models.append(grid_search_models[np.argmax(grid_search_scores)])
+def sum(X):
+    return X[:, :(X.shape[1] // 2)] + X[:, (X.shape[1] // 2):]
+
+
+def prod(X):
+    return X[:, :(X.shape[1] // 2)] * X[:, (X.shape[1] // 2):]
+
+
+def abs_diff(X):
+    return np.abs(X[:, :(X.shape[1] // 2)] - X[:, (X.shape[1] // 2):])
+
+
+def squared_sum(X):
+    return (X[:, :(X.shape[1] // 2)] + X[:, (X.shape[1] // 2):]) ** 2
+
+
+def squared_diff(X):
+    return (X[:, :(X.shape[1] // 2)] - X[:, (X.shape[1] // 2):]) ** 2
+
+
+def sum_squares(X):
+    return X[:, :(X.shape[1] // 2)] ** 2 + X[:, (X.shape[1] // 2):] ** 2
+
+
+def diff_squares(X):
+    return X[:, :(X.shape[1] // 2)] ** 2 - X[:, (X.shape[1] // 2):] ** 2
+
+
+grid = {
+    "lambda__func": [sum, prod, abs_diff, squared_sum, squared_diff, sum_squares, diff_squares],
+    "classifier__C": [0.1, 1, 10],
+    "classifier__kernel": ["rbf", "poly"]
+}
+base_model = Pipeline([
+    ("lambda", FunctionTransformer()),
+    ("classifier", SVC(degree=2, gamma="scale", random_state=1234, max_iter=1))
+])
+grid_search = GridSearchCV(base_model, grid, n_jobs=-1, cv=3, refit=False, verbose=4)
+grid_search.fit(features_train_binary, train_binary["label"])
+results = pd.DataFrame(grid_search.cv_results_).sort_values(by=["rank_test_score"])
+print("Classifiers results:")
+print(results)
+
+best_models = [
+    Pipeline([
+        ("lambda", FunctionTransformer(params["lambda__func"])),
+        ("classifier", SVC(C=params["classifier__C"], kernel=params["classifier__kernel"], degree=2, gamma="scale",
+                           random_state=1234, max_iter=1))
+    ]) for params in results[:10]["params"]
+]
+print("Top 10 best models score:")
+for best_model in best_models:
+    best_model.fit(features_train_binary, train_binary["label"])
+    print(best_model.score(features_test_binary, test_binary["label"]))
+
+stack_grid = {
+  "final_estimator__C": [0.1, 1, 10],
+  "final_estimator__kernel": ["rbf", "poly"]
+}
+stack_grid_search = GridSearchCV(
+    StackingClassifier(
+      estimators=[(str(i), best_model) for i, best_model in enumerate(best_models)],
+      final_estimator=SVC(degree=2, gamma="scale", random_state=1234, max_iter=1),
+      cv=3,
+      n_jobs=-1,
+      verbose=4
+    ),
+    stack_grid,
+    cv=3,
+    verbose=4,
+    n_jobs=-1
+)
+stack_grid_search.fit(features_train_binary, train_binary["label"])
+stack_results = pd.DataFrame(stack_grid_search.cv_results_).sort_values(by=["rank_test_score"])
+print("Stacking results:")
+print(stack_results)
+best_stack_model = stack_grid_search.best_estimator_
+print("Best stacking score:")
+print(best_stack_model.score(features_test_binary, test_binary["label"]))
