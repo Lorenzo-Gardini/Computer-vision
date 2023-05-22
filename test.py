@@ -1,109 +1,52 @@
-import keras
-from keras.layers import Dense, Lambda
-from keras.models import Sequential
-from scikeras.wrappers import KerasClassifier
 from utils import *
-from detectors import *
-from classifiers import SequentialAdaBoostClassifier
-from extraction import *
+import cv2 as cv
+from mtcnn import MTCNN
 import numpy as np
-import tensorflow as tf
-import os
+import json
+from classifier import Classifier
 
-tf.keras.utils.disable_interactive_logging()
-
-#unzip("datasets/test-public-faces.zip")
-#unzip("datasets/test-public-lists.zip")
-#unzip("datasets/test-private-faces.zip")
-#unzip("datasets/test-private-lists.zip")
-#unzip("datasets/test-private-labels.zip")
-
-train_lists_folder = 'test-public-lists'
-train_faces_folder = 'test-public-faces'
-train_faces_folder_dst = 'train-faces'
-test_lists_folder = 'test-private-lists'
-test_labels_folder = 'test-private-labels'
-test_faces_folder = "test-private-faces"
-
-#persist_classes_encoding(train_lists_folder, "class_encoding.json")
-class_encodings = load_classes_encoding('class_encoding.json')
-#move_and_rename_images(train_lists_folder, train_faces_folder, train_faces_folder_dst)
-
-train_resnet_embeddings = create_embeddings_resnet(train_faces_folder_dst, 'train_embeddings_resnet.bin')
-train_facenet_embedding = create_embeddings_facenet(train_faces_folder_dst, 'train_embeddings_facenet.bin')
-
-multiclass_train_dataset = \
-    create_multiclass_train_dataset(train_lists_folder, class_encodings, train_faces_folder, "train_multiclass.csv")
-combine_dataset_embeddings(multiclass_train_dataset, train_resnet_embeddings, "train_resnet_multiclass.bin")
-combine_dataset_embeddings(multiclass_train_dataset, train_facenet_embedding, "train_facenet_multiclass.bin")
-del multiclass_train_dataset
-
-binary_train_dataset = \
-    create_binary_train_dataset('train_multiclass.csv', 'train_binary.csv')
-combine_dataset_embeddings(binary_train_dataset, train_resnet_embeddings, "train_resnet_binary.bin")
-combine_dataset_embeddings(binary_train_dataset, train_facenet_embedding, "train_facenet_binary.bin")
-del binary_train_dataset
-
-del train_resnet_embeddings
-del train_facenet_embedding
-test_resnet_embeddings = create_embeddings_resnet(test_faces_folder, "test_embeddings_resnet.bin")
-test_facenet_embeddings = create_embeddings_facenet(test_faces_folder, "test_embeddings_facenet.bin")
-
-multiclass_test_dataset = \
-    create_multiclass_test_dataset(test_lists_folder, test_labels_folder, class_encodings, "test_multiclass.csv")
-combine_dataset_embeddings(multiclass_test_dataset, test_resnet_embeddings, "train_resnet_multiclass.bin")
-combine_dataset_embeddings(multiclass_test_dataset, test_facenet_embeddings, "train_facenet_multiclass.bin")
-del multiclass_test_dataset
-
-binary_test_dataset = \
-    create_binary_test_dataset(test_lists_folder, test_labels_folder, "test_binary.csv")
-combine_dataset_embeddings(binary_test_dataset, test_resnet_embeddings, "train_resnet_binary.bin")
-combine_dataset_embeddings(binary_test_dataset, test_facenet_embeddings, "train_facenet_binary.bin")
-del binary_test_dataset
-
-# landscape = load_image("resources/family.jpeg")
-# landscape_resized = resize_with_borders(landscape, 512)
-# print(landscape_resized.shape)
-# show_image(landscape_resized)
+# detector = MTCNN()
 #
-# portrait = load_image("resources/portrait.jpg")
-# portrait_resized = resize_with_borders(portrait, 512)
-# print(portrait_resized.shape)
-# show_image(portrait_resized)
-#
-# detector = FaceDetector(landscape)
-# landscape_highlighted = detector.highlight_faces()
-# show_image(landscape_highlighted)
-# for face in detector.crop_faces():
-#     show_image(face)
-# for pair in pair_images(detector.crop_faces()):
-#     show_image(np.hstack([resize_with_borders(pair[0], 100), resize_with_borders(pair[1], 100)]))
-#
-# model1 = Sequential([
-#     keras.Input(1),
-#     Lambda(lambda x: x * 2),
-#     Dense(50),
-#     Dense(1)
-# ])
-# model2 = Sequential([
-#     keras.Input(1),
-#     Lambda(lambda x: x / 2),
-#     Dense(50),
-#     Dense(1)
-# ])
-# model1.compile(loss="mse")
-# model2.compile(loss="mse")
-# clf = SequentialAdaBoostClassifier(
-#     [
-#         KerasClassifier(model=model1, epochs=100, random_state=0xDEADBEEF),
-#         KerasClassifier(model=model2, epochs=100, random_state=0xDEADBEEF)
-#     ],
-#     learning_rate=0.01,
-#     random_state=0xDEADBEEF
-# )
-# clf.fit([[0], [100], [0], [100]], [0, 1, 0, 1])
-# print(clf.estimators_[0].model.summary())
-# print("\n")
-# print(clf.estimators_[1].model.summary())
-# print("\n")
-# print(clf.predict([[0], [100]]))
+# for day in ["09", "11", "13", "14", "15"]:
+#     for i in list(range(1, 9)) + ["parente"]:
+#         path = f"puntata_{day}_04_23_{str(i)}.png"
+#         image = load_image("resources/soliti_ignoti/" + path)
+#         faces = detector.detect_faces(image)
+#         sizes = [face["box"][2] * face["box"][3] for face in faces]
+#         face_index = np.argmax(sizes)
+#         x, y, width, height = faces[face_index]["box"]
+#         new_x = x + width // 2 - height // 2
+#         left = 0
+#         right = 0
+#         if new_x < 0:
+#             left = -new_x
+#             new_x = 0
+#         if new_x + height > image.shape[1]:
+#             right = new_x + height - image.shape[1]
+#         border_image = cv.copyMakeBorder(image, 0, 0, left, right, borderType=cv2.BORDER_CONSTANT, value=0)
+#         bb = (new_x, y, height, height)
+#         show_image(highlight_face(border_image, bb, (255, 0, 0)))
+#         cropped = crop_face(border_image, bb)
+#         resized = resize_image(cropped, 224)
+#         show_image(resized)
+#         cv.imwrite("resources/out/" + path, resized)
+
+episodes = [[], [], [], [], []]
+for i, day in enumerate(["09", "11", "13", "14", "15"]):
+    for index in list(range(1, 9)) + ["parente"]:
+        episodes[i].append(load_image(f"soliti_ignoti/puntata_{day}_04_23_{str(index)}.png"))
+
+
+def feature_extractor(image):
+    return np.zeros((10,))
+
+
+classifier = Classifier(feature_extractor=feature_extractor)
+with open("labels/class_encoding.json", "r") as f:
+    class_encoding = json.load(f)
+items = list(class_encoding.items())
+items.sort(key=lambda x: x[1])
+classes = [key for key, _ in items]
+for episode in episodes:
+    relative_index, relation_index = classifier.play(episode[:8], episode[8])
+    print(f"The classifier chose stranger #{relative_index + 1} which was in relation {classes[relation_index]}")
