@@ -27,9 +27,7 @@ def load_image(path, mode=cv2.IMREAD_COLOR, dtype=np.uint8):
         return cv2.imread(path, mode).astype(dtype)
 
 
-def _resize_image(image, side):
-    if not isinstance(side, int):
-        raise TypeError()
+def resize_image(image, side):
     old_height, old_width, _ = image.shape
     shape = \
         (side, int(old_height * (side / old_width))) \
@@ -42,25 +40,21 @@ def _resize_image(image, side):
     )
 
 
-def _compute_borders(shape, side):
-    height, width, _ = shape
-    top = (side - height) // 2
-    bottom = side - height - top
-    left = (side - width) // 2
-    right = side - width - left
-    return top, bottom, left, right
+def _compute_rectangle(bounding_box):
+    x1, y1, width, height = bounding_box
+    x2 = x1 + width
+    y2 = y1 + height
+    return x1, y1, x2, y2
 
 
-def resize_with_borders(image, side):
-    resized_image = _resize_image(image, side)
-    top, bottom, left, right = _compute_borders(resized_image.shape, side)
-    return cv2.copyMakeBorder(resized_image, top, bottom, left, right, borderType=cv2.BORDER_CONSTANT, value=0)
+def highlight_face(image, bounding_box, color):
+    x1, y1, x2, y2 = _compute_rectangle(bounding_box)
+    return cv2.rectangle(image.copy(), (x1, y1), (x2, y2), color, 2)
 
 
-def pair_images(images):
-    return [(image_a, image_b)
-            for i, image_a in enumerate(images)
-            for j, image_b in enumerate(images) if i < j]
+def crop_face(image, bounding_box):
+    x1, y1, x2, y2 = _compute_rectangle(bounding_box)
+    return image[y1:y2, x1:x2]
 
 
 def unzip(path):
@@ -72,3 +66,8 @@ def load_binary(path):
     with open(path, "rb") as file:
         result = pickle.load(file)
     return result
+
+
+def dump_binary(binary, path):
+    with open(path, "wb") as file:
+        pickle.dump(binary, file)
