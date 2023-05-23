@@ -72,19 +72,19 @@ grid = {
 }
 base_model = Pipeline([
     ("lambda", FunctionTransformer()),
-    ("classifier", SVC(degree=2, gamma="scale", random_state=1234, max_iter=1))
+    ("classifier", SVC(degree=2, gamma="scale", random_state=1234))
 ])
 grid_search = GridSearchCV(base_model, grid, n_jobs=-1, cv=3, refit=False, verbose=4)
 grid_search.fit(features_train_binary, train_binary["label"])
 results = pd.DataFrame(grid_search.cv_results_).sort_values(by=["rank_test_score"])
-print("Classifiers results:")
-print(results)
+print("Classifiers results are in")
+results.to_csv("results_svc.csv")
 
 best_models = [
     Pipeline([
         ("lambda", FunctionTransformer(params["lambda__func"])),
         ("classifier", SVC(C=params["classifier__C"], kernel=params["classifier__kernel"], degree=2, gamma="scale",
-                           random_state=1234, max_iter=1))
+                           random_state=1234))
     ]) for params in results[:10]["params"]
 ]
 print("Top 10 best models score:")
@@ -99,7 +99,7 @@ stack_grid = {
 stack_grid_search = GridSearchCV(
     StackingClassifier(
       estimators=[(str(i), best_model) for i, best_model in enumerate(best_models)],
-      final_estimator=SVC(degree=2, gamma="scale", random_state=1234, max_iter=1),
+      final_estimator=SVC(degree=2, gamma="scale", random_state=1234),
       cv=3,
       n_jobs=-1,
       verbose=4
@@ -111,8 +111,8 @@ stack_grid_search = GridSearchCV(
 )
 stack_grid_search.fit(features_train_binary, train_binary["label"])
 stack_results = pd.DataFrame(stack_grid_search.cv_results_).sort_values(by=["rank_test_score"])
-print("Stacking results:")
-print(stack_results)
+print("Stacking results are in")
+stack_results.to_csv("results_stacking.csv")
 best_stack_model = stack_grid_search.best_estimator_
 print("Best stacking score:")
 print(best_stack_model.score(features_test_binary, test_binary["label"]))
