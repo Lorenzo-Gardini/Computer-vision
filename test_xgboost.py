@@ -7,38 +7,36 @@ from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import FunctionTransformer
 from sklearn.model_selection import GridSearchCV
 from sklearn.ensemble import StackingClassifier
+
+
 def load(cache_filename):
     with open(cache_filename, "rb") as features_file:
         features = pickle.load(features_file)
     return features
 
-train_features = load("handcrafted/train-features-full.bin")
-test_features = load("handcrafted/test-features-full.bin")
+
+train_features = load("handcrafted/train-features.bin")
+test_features = load("handcrafted/test-features.bin")
 train_binary = pd.read_csv("labels/train_binary.csv")
 test_binary = pd.read_csv("labels/test_binary.csv")
-test_faces = os.listdir("resources/test-private-faces")
-train_faces = os.listdir("resources/train-faces")
+test_paths = load("handcrafted/test-features-paths.bin")
+train_paths = load("handcrafted/train-features-paths.bin")
 
-#features_train_binary = load("downsampled/downsampled-train-features-2056.bin")
+train_binary = train_binary[(train_binary["p1"].isin(train_paths.flatten())) & (train_binary["p2"].isin(train_paths.flatten()))]
 
-#train_binary = train_binary[::5]
-train_binary = pd.concat([train_binary[:3], train_binary[-3:]])
-test_binary = pd.concat([test_binary[:3], test_binary[-3:]])
-
-train_faces.sort()
 features_train_binary = np.empty((train_binary.shape[0], train_features.shape[1] * 2), dtype=np.float32)
 features_train_binary[:, :train_features.shape[1]] = \
-     np.array([train_features[train_faces.index(path)] for path in train_binary["p1"]])
+  np.array([train_features[np.argwhere(train_paths == path)[0][0]] for path in train_binary["p1"]])
 features_train_binary[:, train_features.shape[1]:] = \
-     np.array([train_features[train_faces.index(path)] for path in train_binary["p2"]])
+  np.array([train_features[np.argwhere(train_paths == path)[0][0]] for path in train_binary["p2"]])
 
+test_binary = test_binary[(test_binary["p1"].isin(test_paths.flatten())) & (test_binary["p2"].isin(test_paths.flatten()))]
 
-test_faces.sort()
 features_test_binary = np.empty((test_binary.shape[0], test_features.shape[1] * 2), dtype=np.float32)
 features_test_binary[:, :test_features.shape[1]] = \
-    np.array([test_features[test_faces.index(path)] for path in test_binary["p1"]])
+  np.array([test_features[np.argwhere(test_paths == path)[0][0]] for path in test_binary["p1"]])
 features_test_binary[:, test_features.shape[1]:] = \
-    np.array([test_features[test_faces.index(path)] for path in test_binary["p2"]])
+  np.array([test_features[np.argwhere(test_paths == path)[0][0]] for path in test_binary["p2"]])
 
 
 def sum(X):
@@ -49,8 +47,8 @@ def prod(X):
     return X[:, :(X.shape[1] // 2)] * X[:, (X.shape[1] // 2):]
 
 
-def abs_diff(X):
-    return np.abs(X[:, :(X.shape[1] // 2)] - X[:, (X.shape[1] // 2):])
+def diff(X):
+    return X[:, :(X.shape[1] // 2)] - X[:, (X.shape[1] // 2):]
 
 
 def squared_sum(X):
@@ -71,7 +69,7 @@ def diff_squares(X):
 
 print('start grid')
 
-functions = [sum, prod, abs_diff, squared_sum, squared_diff, sum_squares, diff_squares]
+functions = [sum, prod, diff, squared_sum, squared_diff, sum_squares, diff_squares]
 
 grid_params = {
     'min_child_weight': [1, 5, 10],
@@ -133,7 +131,7 @@ best_stack_model = stack_grid_search.best_estimator_
 print("Best stacking score:")
 print(best_stack_model.score(features_test_binary, test_binary["label"]))
 # grid = {
-#     "lambda__func": [sum, prod, abs_diff, squared_sum, squared_diff, sum_squares, diff_squares],
+#     "lambda__func": [sum, prod, diff, squared_sum, squared_diff, sum_squares, diff_squares],
 #     "classifier__C": [0.1, 1, 10],
 #     "classifier__kernel": ["rbf", "poly"]
 # }
