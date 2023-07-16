@@ -4,7 +4,6 @@ import os
 import zipfile
 import numpy as np
 import pickle
-import matplot
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
@@ -167,3 +166,44 @@ def show_model_scores(model, train_pred, train_y, test_pred, test_y, is_binary, 
     plt.xlabel('Predicted')
     plt.ylabel('Actual')
     plt.show()
+
+def show_participants(strangers, relative, real_parent, guessed_parent):
+  fig, ax = plt.subplots(figsize=(2, 2))
+  ax.imshow(cv.cvtColor(relative, cv.COLOR_BGR2RGB))
+  ax.text(0.5, -0.1, 'relative', transform=ax.transAxes, fontsize=10, ha='center')
+  plt.axis('off')
+  fig, axes = plt.subplots(1, 8, figsize=(17, 4))
+  for i in range(len(strangers)):
+      axes[i].imshow(cv.cvtColor(strangers[i], cv.COLOR_BGR2RGB))
+      axes[i].axis('off')
+      axes[i].text(0.5, -0.1, f'stranger #{i+1}', transform=axes[i].transAxes, fontsize=10, ha='center')
+
+  fig, axes = plt.subplots(1, 2, figsize=(5, 2))
+  axes[0].imshow(cv.cvtColor(real_parent, cv.COLOR_BGR2RGB))
+  axes[0].axis('off')
+  axes[0].text(0.5, -0.1, 'real parent', transform=axes[0].transAxes, fontsize=10, ha='center')
+  axes[1].imshow(cv.cvtColor(guessed_parent, cv.COLOR_BGR2RGB))
+  axes[1].axis('off')
+  axes[1].text(0.5, -0.1, 'predicted parent', transform=axes[1].transAxes, fontsize=10, ha='center')
+
+  plt.tight_layout()
+  plt.show()
+
+
+def aggregate_solutions(relation_classifier, relatives_classifier, build_solution_fn):
+  for (_, solution), episode in zip(solutions.iterrows(), episodes):
+    strangers = episode[:8]
+    relative = episode[8]
+    relative_index, relation_index = build_solution_fn(relation_classifier, relatives_classifier, strangers, relative)
+    relative_index += 1
+    relation = classes_key[relation_index]
+    print(f'Episode: {solution["date"]}')
+    show_participants(strangers, relative, strangers[solution["relative_index"] - 1], strangers[relative_index - 1])
+    print(f"The classifier chose stranger #{relative_index} which was in relation \"{classes_key[relation_index]}\"")
+    if solution["relative_index"] != relative_index:
+      print(f'The classifier did not find the correct relative #{solution["relative_index"]} in relation {solution["relation"]}')
+    elif solution["relation"] != relation:
+      print(f'The classifier did find the correct relative, but did not find the correct relation which was {solution["relation"]}')
+    else:
+      print("The classifier was right")
+    print()
