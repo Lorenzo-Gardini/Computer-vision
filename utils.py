@@ -190,7 +190,7 @@ def show_participants(strangers, relative, real_parent, guessed_parent):
   plt.show()
 
 
-def aggregate_solutions(relation_classifier, relatives_classifier, build_solution_fn):
+def aggregate_solutions(relation_classifier, relatives_classifier, build_solution_fn, episodes, solutions, classes_key):
   for (_, solution), episode in zip(solutions.iterrows(), episodes):
     strangers = episode[:8]
     relative = episode[8]
