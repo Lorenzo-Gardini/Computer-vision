@@ -77,10 +77,10 @@ def dump_binary(binary, path):
         pickle.dump(binary, file)
 
 def plot_images(image_1_path, image_2_path, message):
-  image1 = cv2.imread(image_1_path, cv.IMREAD_COLOR)
-  image2 = cv2.imread(image_2_path, cv.IMREAD_COLOR)
-  image1 = cv2.cvtColor(image1, cv.COLOR_BGR2RGB)
-  image2 = cv2.cvtColor(image2, cv.COLOR_BGR2RGB)
+  image1 = cv2.imread(image_1_path, cv2.IMREAD_COLOR)
+  image2 = cv2.imread(image_2_path, cv2.IMREAD_COLOR)
+  image1 = cv2.cvtColor(image1, cv2.COLOR_BGR2RGB)
+  image2 = cv2.cvtColor(image2, cv2.COLOR_BGR2RGB)
   fig, axes = plt.subplots(1, 2)
 
   axes[0].imshow(image1)
@@ -169,20 +169,20 @@ def show_model_scores(model, train_pred, train_y, test_pred, test_y, is_binary, 
 
 def show_participants(strangers, relative, real_parent, guessed_parent):
   fig, ax = plt.subplots(figsize=(2, 2))
-  ax.imshow(cv.cvtColor(relative, cv.COLOR_BGR2RGB))
+  ax.imshow(cv2.cvtColor(relative, cv2.COLOR_BGR2RGB))
   ax.text(0.5, -0.1, 'relative', transform=ax.transAxes, fontsize=10, ha='center')
   plt.axis('off')
   fig, axes = plt.subplots(1, 8, figsize=(17, 4))
   for i in range(len(strangers)):
-      axes[i].imshow(cv.cvtColor(strangers[i], cv.COLOR_BGR2RGB))
+      axes[i].imshow(cv2.cvtColor(strangers[i], cv2.COLOR_BGR2RGB))
       axes[i].axis('off')
       axes[i].text(0.5, -0.1, f'stranger #{i+1}', transform=axes[i].transAxes, fontsize=10, ha='center')
 
   fig, axes = plt.subplots(1, 2, figsize=(5, 2))
-  axes[0].imshow(cv.cvtColor(real_parent, cv.COLOR_BGR2RGB))
+  axes[0].imshow(cv2.cvtColor(real_parent, cv2.COLOR_BGR2RGB))
   axes[0].axis('off')
   axes[0].text(0.5, -0.1, 'real parent', transform=axes[0].transAxes, fontsize=10, ha='center')
-  axes[1].imshow(cv.cvtColor(guessed_parent, cv.COLOR_BGR2RGB))
+  axes[1].imshow(cv2.cvtColor(guessed_parent, cv2.COLOR_BGR2RGB))
   axes[1].axis('off')
   axes[1].text(0.5, -0.1, 'predicted parent', transform=axes[1].transAxes, fontsize=10, ha='center')
 
