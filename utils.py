@@ -145,7 +145,7 @@ def plot_history(history):
     # Save the plot if save_file is provided
     plt.show()
 
-def show_model_scores(model, train_pred, train_y, test_pred, test_y, is_binary, classes=None):
+def show_model_scores(train_pred, train_y, test_pred, test_y, is_binary, classes=None):
     if is_binary:
         train_pred = (train_pred > 0.5).astype(int)
         test_pred = (test_pred > 0.5).astype(int)
