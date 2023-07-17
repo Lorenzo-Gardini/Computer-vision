@@ -1,0 +1,3 @@
+[submodule "report"]
+	path = report
+	url = git@github.com:cake-lier/computer-vision-report.git
